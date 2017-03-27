@@ -1,0 +1,13 @@
+* Einlesen
+  - layouts sind unter res/layouts
+  - Fragments definieren passenden Listener, welchen die Activity
+    implementieren muss
+  - DisplayManager kümmert sich um die einzelnen Fragments, die in der
+    MainActivity angezeigt werden (einblenden/ausblenden...)
+* Shortcuts
+  - Issue: https://github.com/orgzly/orgzly-android/issues/46
+  - Registrieren siehe hier: https://github.com/openintents/shoppinglist/blob/5b3d09bb68ab16f6affbf6cba0e861f833241aea/ShoppingList/src/main/AndroidManifest.xml#L169
+    - siehe auch hier: http://stackoverflow.com/a/6337645
+  - Handeln siehe hier: https://github.com/openintents/shoppinglist/blob/5b3d09bb68ab16f6affbf6cba0e861f833241aea/ShoppingList/src/main/java/org/openintents/shopping/ui/ShoppingListsActivity.java
+  - BooksFragment zeigt Notebooks an
+  - ShareActivity ist ein hilfreiches Vorbild
