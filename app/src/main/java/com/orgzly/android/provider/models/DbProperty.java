@@ -6,7 +6,7 @@ import android.provider.BaseColumns;
 
 import com.orgzly.android.provider.DatabaseUtils;
 
-public class DbProperty extends Model {
+public class DbProperty {
     public static final String TABLE = "properties";
 
     public static final String[] CREATE_SQL = new String[] {
@@ -31,18 +31,7 @@ public class DbProperty extends Model {
 
     public static class Column implements Columns, BaseColumns {}
 
-    public DbPropertyName name;
-    public DbPropertyValue value;
-
-    public DbProperty(DbPropertyName name, DbPropertyValue value) {
-        this.name = name;
-        this.value = value;
-    }
-
-    public long save(SQLiteDatabase db) {
-        long nameId = name.save(db);
-        long valueId = value.save(db);
-
+    public static long getOrInsert(SQLiteDatabase db, long nameId, long valueId) {
         long id = DatabaseUtils.getId(
                 db,
                 TABLE,
@@ -50,7 +39,6 @@ public class DbProperty extends Model {
 
         if (id == 0) {
             ContentValues values = new ContentValues();
-
             values.put("name_id", nameId);
             values.put("value_id", valueId);
 

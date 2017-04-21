@@ -38,7 +38,7 @@ import com.orgzly.BuildConfig;
 import com.orgzly.R;
 import com.orgzly.android.Book;
 import com.orgzly.android.BookName;
-import com.orgzly.android.Broadcasts;
+import com.orgzly.android.AppIntent;
 import com.orgzly.android.Filter;
 import com.orgzly.android.Note;
 import com.orgzly.android.NotesBatch;
@@ -156,9 +156,9 @@ public class MainActivity extends CommonActivity
         super.onCreate(savedInstanceState);
 
         LocalBroadcastManager.getInstance(this)
-                .registerReceiver(dbUpgradeStartedReceiver, new IntentFilter(Broadcasts.ACTION_DB_UPGRADE_STARTED));
+                .registerReceiver(dbUpgradeStartedReceiver, new IntentFilter(AppIntent.ACTION_DB_UPGRADE_STARTED));
         LocalBroadcastManager.getInstance(this)
-                .registerReceiver(dbUpgradeEndedReceiver, new IntentFilter(Broadcasts.ACTION_DB_UPGRADE_ENDED));
+                .registerReceiver(dbUpgradeEndedReceiver, new IntentFilter(AppIntent.ACTION_DB_UPGRADE_ENDED));
 
         /*
          * Set defaults.
@@ -442,7 +442,6 @@ public class MainActivity extends CommonActivity
             }
         }
 
-
         super.onBackPressed();
     }
 
@@ -617,7 +616,7 @@ public class MainActivity extends CommonActivity
         String guessedBookName = guessBookNameFromUri(uri);
 
         SimpleOneLinerDialog
-                .getInstance(DIALOG_IMPORT_BOOK, "Notebook Name", null, guessedBookName, null, "Import", "Cancel", bundle)
+                .getInstance(DIALOG_IMPORT_BOOK, R.string.import_as, R.string.name, R.string.import_, R.string.cancel, guessedBookName, bundle)
                 .show(getSupportFragmentManager(), SimpleOneLinerDialog.FRAGMENT_TAG);
     }
 
@@ -1224,7 +1223,7 @@ public class MainActivity extends CommonActivity
     @Override
     public void onBookCreateRequest() {
         SimpleOneLinerDialog
-                .getInstance(DIALOG_NEW_BOOK, "New Notebook", "Name", null, null, "Create", "Cancel", null)
+                .getInstance(DIALOG_NEW_BOOK, R.string.new_notebook, R.string.name, R.string.create, R.string.cancel, null, null)
                 .show(getSupportFragmentManager(), SimpleOneLinerDialog.FRAGMENT_TAG);
     }
 

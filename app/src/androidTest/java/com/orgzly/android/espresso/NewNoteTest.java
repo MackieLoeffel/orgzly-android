@@ -14,6 +14,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import static android.support.test.espresso.Espresso.onView;
+import static android.support.test.espresso.Espresso.openContextualActionModeOverflowMenu;
 import static android.support.test.espresso.Espresso.pressBack;
 import static android.support.test.espresso.action.ViewActions.click;
 import static android.support.test.espresso.action.ViewActions.longClick;
@@ -27,6 +28,7 @@ import static com.orgzly.android.espresso.EspressoUtils.onActionItemClick;
 import static com.orgzly.android.espresso.EspressoUtils.onListItem;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.endsWith;
 
 /**
  *
@@ -60,7 +62,7 @@ public class NewNoteTest extends OrgzlyTest {
         onView(allOf(withText("booky"), isDisplayed())).perform(click());
 
         /* Enable "Created at" in settings. */
-        onActionItemClick(R.id.activity_action_settings, "Settings");
+        onActionItemClick(R.id.activity_action_settings, R.string.settings);
         onListItem(EspressoUtils.SETTINGS_CREATED_AT).perform(click());
         pressBack();
 
@@ -80,7 +82,7 @@ public class NewNoteTest extends OrgzlyTest {
 
         onListItem(2).perform(longClick());
         onView(withId(R.id.book_cab_new)).perform(click());
-        onView(withText("New under")).perform(click());
+        onView(withText(R.string.heads_action_menu_item_add_under)).perform(click());
         onView(withId(R.id.fragment_note_title)).perform(replaceText("A"), closeSoftKeyboardWithDelay());
         onView(withId(R.id.done)).perform(click());
         onListItem(2).onChildView(withId(R.id.item_head_title)).check(matches(withText("2")));
@@ -98,7 +100,7 @@ public class NewNoteTest extends OrgzlyTest {
 
         onListItem(2).perform(longClick());
         onView(withId(R.id.book_cab_new)).perform(click());
-        onView(withText("New above")).perform(click());
+        onView(withText(R.string.heads_action_menu_item_add_above)).perform(click());
         onView(withId(R.id.fragment_note_title)).perform(replaceText("A"), closeSoftKeyboardWithDelay());
         onView(withId(R.id.done)).perform(click());
         onListItem(1).onChildView(withId(R.id.item_head_title)).check(matches(withText("1")));
@@ -122,7 +124,7 @@ public class NewNoteTest extends OrgzlyTest {
 
         onListItem(2).perform(longClick());
         onView(withId(R.id.book_cab_new)).perform(click());
-        onView(withText("New below")).perform(click());
+        onView(withText(R.string.heads_action_menu_item_add_below)).perform(click());
         onView(withId(R.id.fragment_note_title)).perform(replaceText("A"), closeSoftKeyboardWithDelay());
         onView(withId(R.id.done)).perform(click());
         onListItem(2).onChildView(withId(R.id.item_head_title)).check(matches(withText("2")));
@@ -157,5 +159,50 @@ public class NewNoteTest extends OrgzlyTest {
         onView(withId(R.id.fragment_note_title)).check(matches(isDisplayed()));
         onView(withId(R.id.done)).check(matches(isDisplayed()));
         onView(withId(R.id.action_context_bar)).check(matches(not(isDisplayed())));
+    }
+
+    @Test
+    public void testNewNoteAfterMovingNotesAround() {
+        shelfTestUtils.setupBook("notebook-1", "");
+        activityRule.launchActivity(null);
+
+        onView(allOf(withText("notebook-1"), isDisplayed())).perform(click());
+
+        onView(withId(R.id.fab)).perform(click());
+        onView(withId(R.id.fragment_note_title)).perform(replaceText("A"));
+        onView(withId(R.id.done)).perform(click());
+        onView(withId(R.id.fab)).perform(click());
+        onView(withId(R.id.fragment_note_title)).perform(replaceText("B"));
+        onView(withId(R.id.done)).perform(click());
+        onView(withId(R.id.fab)).perform(click());
+        onView(withId(R.id.fragment_note_title)).perform(replaceText("C"));
+        onView(withId(R.id.done)).perform(click());
+        onView(withId(R.id.fab)).perform(click());
+        onView(withId(R.id.fragment_note_title)).perform(replaceText("Parent 1"));
+        onView(withId(R.id.done)).perform(click());
+
+        /* Move A B and C under Parent 1. */
+        for (int i = 0; i < 3; i++) {
+            onListItem(0).perform(longClick());
+            openContextualActionModeOverflowMenu();
+            onView(withText(R.string.move)).perform(click());
+            onView(withId(R.id.notes_action_move_down)).perform(click());
+            onView(withId(R.id.notes_action_move_down)).perform(click());
+            onView(withId(R.id.notes_action_move_down)).perform(click());
+            onView(withId(R.id.notes_action_move_right)).perform(click());
+            pressBack();
+        }
+
+        onView(withId(R.id.fab)).perform(click());
+        onView(withId(R.id.fragment_note_title)).perform(replaceText("Parent 2"));
+        onView(withId(R.id.done)).perform(click());
+
+        onListItem(0).perform(longClick());
+        onView(withId(R.id.book_cab_new)).perform(click());
+        onView(withText(R.string.heads_action_menu_item_add_under)).perform(click());
+        onView(withId(R.id.fragment_note_title)).perform(replaceText("Note"));
+        onView(withId(R.id.done)).perform(click());
+
+        onListItem(4).onChildView(withId(R.id.item_head_title)).check(matches(withText(endsWith("Note"))));
     }
 }

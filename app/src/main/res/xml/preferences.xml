@@ -63,7 +63,8 @@
             android:selectAllOnFocus="true"
             android:inputType="text"
             android:singleLine="true"
-            android:title="@string/share_notebook" />
+            android:dialogMessage="@string/default_notebook_desc"
+            android:title="@string/default_notebook" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/notes_list">
@@ -87,6 +88,12 @@
             android:entries="@array/book_name_in_search_entries"
             android:entryValues="@array/book_name_in_search_entry_values"
             android:defaultValue="@string/pref_default_value_book_name_in_search"/>
+
+        <CheckBoxPreference
+            android:key="@string/pref_key_display_inherited_tags_in_search_results"
+            android:title="@string/display_inherited_tags_in_search_results"
+            android:summary="@string/display_inherited_tags_in_search_results_summary"
+            android:defaultValue="@bool/pref_default_display_inherited_tags_in_search_results"/>
 
         <CheckBoxPreference
             android:key="@string/pref_key_is_notes_content_displayed_in_list"

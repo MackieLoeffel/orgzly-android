@@ -48,17 +48,17 @@ import static org.hamcrest.Matchers.not;
 class EspressoUtils {
     static final int SETTINGS_REVERSED_NOTE_CLICK_ACTION = 1;
 
-    static final int SETTINGS_STATE_KEYWORDS = 20;
-    static final int SETTINGS_DEFAULT_PRIORITY = 21;
-    static final int SETTINGS_LOWEST_PRIORITY = 22;
+    static final int SETTINGS_STATE_KEYWORDS = 21;
+    static final int SETTINGS_DEFAULT_PRIORITY = 22;
+    static final int SETTINGS_LOWEST_PRIORITY = 23;
 
-    static final int SETTINGS_NEW_NOTE_STATE = 24;
-    static final int SETTINGS_CREATED_AT = 26;
+    static final int SETTINGS_NEW_NOTE_STATE = 25;
+    static final int SETTINGS_CREATED_AT = 27;
 
-    static final int SETTINGS_REPOS = 32;
+    static final int SETTINGS_REPOS = 33;
 
-    static final int IMPORT_GETTING_STARTED = 34;
-    static final int SETTINGS_CLEAR_DATABASE = 35;
+    static final int IMPORT_GETTING_STARTED = 35;
+    static final int SETTINGS_CLEAR_DATABASE = 36;
 
     /**
      */
@@ -96,7 +96,7 @@ class EspressoUtils {
     /**
      * Item could either be on the action bar (visible) or in the overflow menu.
      */
-    static void onActionItemClick(int id, String text) {
+    static void onActionItemClick(int id, int resourceId) {
         try {
             onView(withId(id)).perform(click());
 
@@ -106,7 +106,7 @@ class EspressoUtils {
             // Open the overflow menu OR open the options menu,
             // depending on if the device has a hardware or software overflow menu button.
             openActionBarOverflowOrOptionsMenu(InstrumentationRegistry.getTargetContext());
-            onView(withText(text)).perform(click());
+            onView(withText(resourceId)).perform(click());
         }
     }
 
@@ -146,7 +146,7 @@ class EspressoUtils {
     }
 
     private static void settingsSetKeywords(int viewId, String keywords) {
-        onActionItemClick(R.id.activity_action_settings, "Settings");
+        onActionItemClick(R.id.activity_action_settings, R.string.settings);
 
         onListItem(SETTINGS_STATE_KEYWORDS).perform(click());
 
@@ -158,6 +158,7 @@ class EspressoUtils {
     }
 
     static void searchForText(String str) {
+        onView(allOf(withId(R.id.activity_action_search), isDisplayed())).perform(click());
         onView(withHint(R.string.search_hint)).perform(replaceText(str), pressKey(66));
 
         /* TODO: Ugh. */
