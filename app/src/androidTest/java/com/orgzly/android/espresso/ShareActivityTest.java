@@ -19,6 +19,7 @@ import static android.support.test.espresso.assertion.ViewAssertions.matches;
 import static android.support.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static android.support.test.espresso.matcher.ViewMatchers.withId;
 import static android.support.test.espresso.matcher.ViewMatchers.withText;
+import static com.orgzly.android.espresso.EspressoUtils.onSnackbar;
 import static com.orgzly.android.espresso.EspressoUtils.onSpinnerString;
 import static com.orgzly.android.espresso.EspressoUtils.toLandscape;
 import static com.orgzly.android.espresso.EspressoUtils.toPortrait;
@@ -123,15 +124,15 @@ public class ShareActivityTest extends OrgzlyTest {
     public void testNoMatchingType() {
         startActivityWithIntent(Intent.ACTION_SEND, "image/png", null);
 
-        onView(withId(R.id.fragment_note_title))
-                .check(matches(withText("Share type image/png is not supported")));
+        onView(withId(R.id.fragment_note_title)).check(matches(withText("")));
+        onSnackbar().check(matches(withText(context.getString(R.string.share_type_not_supported, "image/png"))));
     }
 
     @Test
     public void testNoActionSend() {
         startActivityWithIntent(null, null, null);
 
-        onView(withId(R.id.fragment_note_title)).check(matches(withText("Share action not set")));
+        onView(withId(R.id.fragment_note_title)).check(matches(withText("")));
     }
 
 
@@ -169,7 +170,7 @@ public class ShareActivityTest extends OrgzlyTest {
         toPortrait(activityRule);
         onView(withId(R.id.fragment_note_scheduled_button)).check(matches(withText(R.string.schedule_button_hint)));
         onView(withId(R.id.fragment_note_scheduled_button)).perform(click());
-        onView(anyOf(withText("OK"), withText("Set"), withText("Done"))).perform(click());
+        onView(withText(R.string.set)).perform(click());
         onView(withId(R.id.fragment_note_scheduled_button)).check(matches(allOf(withText(startsWith(userDate())), isDisplayed())));
         toLandscape(activityRule);
         onView(withId(R.id.fragment_note_scheduled_button)).check(matches(allOf(withText(startsWith(userDate())), isDisplayed())));

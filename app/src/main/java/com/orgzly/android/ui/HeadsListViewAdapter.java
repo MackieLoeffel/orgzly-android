@@ -29,11 +29,19 @@ import com.orgzly.android.util.NoteContentParser;
 import com.orgzly.android.util.UserTimeFormatter;
 import com.orgzly.org.OrgHead;
 
+import java.util.List;
+
 public class HeadsListViewAdapter extends SimpleCursorAdapter {
     private static final String TAG = HeadsListViewAdapter.class.getName();
 
     /* Separator for heading parts (state, priority, title, tags). */
     private final static String TITLE_SEPARATOR = "  ";
+
+    /*
+     * Separator between note's tags and inherited tags.
+     * Not used if note doesn't have its own tags.
+     */
+    private final static String INHERITED_TAGS_SEPARATOR = " • ";
 
     /* Separator for individual tags. */
     private final static String TAGS_SEPARATOR = " ";
@@ -188,7 +196,7 @@ public class HeadsListViewAdapter extends SimpleCursorAdapter {
         holder.title.setText(generateTitle(note, head));
 
         /* Content. */
-        if (head.hasContent() && AppPreferences.isNotesContentDisplayedInList(context) && (!note.isFolded() || !AppPreferences.isNotesContentFoldable(context)) && (inBook || AppPreferences.isNotesContentDisplayedInSearch(context))) {
+        if (head.hasContent() && AppPreferences.isNotesContentDisplayedInList(context) && (!note.getPosition().isFolded() || !AppPreferences.isNotesContentFoldable(context)) && (inBook || AppPreferences.isNotesContentDisplayedInSearch(context))) {
             if (AppPreferences.isFontMonospaced(context)) {
                 holder.content.setTypeface(Typeface.MONOSPACE);
             }
@@ -273,7 +281,7 @@ public class HeadsListViewAdapter extends SimpleCursorAdapter {
                 isVisible = true;
 
                 /* Type of the fold button. */
-                if (note.isFolded()) {
+                if (note.getPosition().isFolded()) {
                     holder.foldButtonText.setText(R.string.unfold_button_character);
                 } else {
                     holder.foldButtonText.setText(R.string.fold_button_character);
@@ -297,7 +305,7 @@ public class HeadsListViewAdapter extends SimpleCursorAdapter {
 
         if (inBook) {
             if (note.getPosition().getDescendantsCount() > 0) { // Has descendants
-                if (note.isFolded()) {
+                if (note.getPosition().isFolded()) {
                     holder.bullet.setText(R.string.bullet_with_children_folded);
                 } else {
                     holder.bullet.setText(R.string.bullet_with_children_unfolded);
@@ -373,7 +381,6 @@ public class HeadsListViewAdapter extends SimpleCursorAdapter {
             builder.setSpan(new StyleSpan(Typeface.BOLD), 0, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
 
-
         /* Space before title, unless there's nothing added. */
         if (builder.length() > 0) {
             builder.append(TITLE_SEPARATOR);
@@ -382,10 +389,8 @@ public class HeadsListViewAdapter extends SimpleCursorAdapter {
         /* Title. */
         builder.append(NoteContentParser.fromOrg(head.getTitle()));
 
-//        /* Bold everything up until now. */
-//        if (builder.length() > 0) {
-//            builder.setSpan(new StyleSpan(Typeface.BOLD), 0, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-//        }
+        /* Append note ID. */
+        // builder.append(TITLE_SEPARATOR).append("#").append(String.valueOf(note.getId()));
 
         int mark = builder.length();
 
@@ -393,12 +398,23 @@ public class HeadsListViewAdapter extends SimpleCursorAdapter {
 
         /* Tags. */
         if (head.hasTags()) {
-            builder.append(TITLE_SEPARATOR).append(generateTags(head));
+            builder.append(TITLE_SEPARATOR).append(generateTags(head.getTags()));
+            hasPostTitleText = true;
+        }
+
+        /* Inherited tags in search results. */
+        if (!inBook && note.hasInheritedTags() && AppPreferences.inheritedTagsInSearchResults(mContext)) {
+            if (head.hasTags()) {
+                builder.append(INHERITED_TAGS_SEPARATOR);
+            } else {
+                builder.append(TITLE_SEPARATOR);
+            }
+            builder.append(generateTags(note.getInheritedTags()));
             hasPostTitleText = true;
         }
 
         /* Content length. */
-        if (head.hasContent() && (!AppPreferences.isNotesContentDisplayedInList(mContext) || (note.isFolded() && AppPreferences.isNotesContentFoldable(mContext)))) {
+        if (head.hasContent() && (!AppPreferences.isNotesContentDisplayedInList(mContext) || (note.getPosition().isFolded() && AppPreferences.isNotesContentFoldable(mContext)))) {
             builder.append(TITLE_SEPARATOR).append(String.valueOf(note.getContentLines()));
             hasPostTitleText = true;
         }
@@ -418,8 +434,8 @@ public class HeadsListViewAdapter extends SimpleCursorAdapter {
         return builder;
     }
 
-    private CharSequence generateTags(OrgHead head) {
-        return new SpannableString(TextUtils.join(TAGS_SEPARATOR, head.getTags()));
+    private CharSequence generateTags(List<String> tags) {
+        return new SpannableString(TextUtils.join(TAGS_SEPARATOR, tags));
     }
 
     private CharSequence generateState(OrgHead head) {

@@ -10,7 +10,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.orgzly.BuildConfig;
-import com.orgzly.android.Broadcasts;
+import com.orgzly.android.AppIntent;
 import com.orgzly.android.provider.models.*;
 import com.orgzly.android.provider.views.BooksView;
 import com.orgzly.android.provider.views.NotesView;
@@ -62,14 +62,14 @@ public class Database extends SQLiteOpenHelper {
             @Override
             public void run() {
                 LocalBroadcastManager.getInstance(context)
-                        .sendBroadcast(new Intent(Broadcasts.ACTION_DB_UPGRADE_STARTED));
+                        .sendBroadcast(new Intent(AppIntent.ACTION_DB_UPGRADE_STARTED));
             }
         });
 
         createAllViews(db);
 
         LocalBroadcastManager.getInstance(context)
-                .sendBroadcast(new Intent(Broadcasts.ACTION_DB_UPGRADE_ENDED));
+                .sendBroadcast(new Intent(AppIntent.ACTION_DB_UPGRADE_ENDED));
     }
 
     /**
@@ -105,6 +105,7 @@ public class Database extends SQLiteOpenHelper {
         for (String sql : DbPropertyName.CREATE_SQL) db.execSQL(sql);
         for (String sql : DbPropertyValue.CREATE_SQL) db.execSQL(sql);
         for (String sql : DbProperty.CREATE_SQL) db.execSQL(sql);
+        for (String sql : DbNoteAncestor.CREATE_SQL) db.execSQL(sql);
     }
 
     private void dropAllTables(SQLiteDatabase db) {
@@ -128,6 +129,8 @@ public class Database extends SQLiteOpenHelper {
         db.execSQL(DbPropertyName.DROP_SQL);
         db.execSQL(DbPropertyValue.DROP_SQL);
         db.execSQL(DbProperty.DROP_SQL);
+        db.execSQL(DbNoteAncestor.DROP_SQL);
+
     }
 
     /** DROP views */

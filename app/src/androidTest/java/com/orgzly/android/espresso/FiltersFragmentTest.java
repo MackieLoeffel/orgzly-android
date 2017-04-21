@@ -40,7 +40,7 @@ public class FiltersFragmentTest extends OrgzlyTest {
         activityRule.launchActivity(null);
 
         onView(withId(R.id.drawer_layout)).perform(open());
-        onView(withText("Searches")).perform(click());
+        onView(withText(R.string.searches)).perform(click());
     }
 
     @Test
@@ -84,7 +84,7 @@ public class FiltersFragmentTest extends OrgzlyTest {
 
         onListItem(0).perform(longClick());
         openContextualActionModeOverflowMenu();
-        onView(withText("Delete")).perform(click());
+        onView(withText(R.string.delete)).perform(click());
 
         pressBack();
 
@@ -98,5 +98,11 @@ public class FiltersFragmentTest extends OrgzlyTest {
         onView(withId(R.id.drawer_layout)).perform(open());
         onView(allOf(withText("book-one"), isDisplayed())).perform(click());
         onView(withId(R.id.filters_cab_move_up)).check(matches(not(isDisplayed())));
+    }
+
+    @Test
+    public void testMovingFilterDown() {
+        onListItem(0).perform(longClick());
+        onView(withId(R.id.filters_cab_move_down)).perform(click());
     }
 }

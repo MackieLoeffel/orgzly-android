@@ -38,6 +38,10 @@ public class DatabaseUtils {
                DbNote.Column.LFT + "< " + lft + " AND " + rgt + " < " + DbNote.Column.RGT + ")";
     }
 
+    public static String whereAncestorsAndNote(long bookId, long id) {
+        return "(" + whereAncestors(bookId, String.valueOf(id)) + " OR (" + DbNote.Column._ID + " = " + id + "))";
+    }
+
     public static String whereAncestors(long bookId, String ids) {
         String sql = "(" + DbNote.Column._ID + " IN (SELECT DISTINCT b." + DbNote.Column._ID + " FROM " +
                      DbNote.TABLE + " a, " + DbNote.TABLE + " b WHERE " +
@@ -79,13 +83,13 @@ public class DatabaseUtils {
     }
 
     public static String whereDescendantsAndNotes(long bookId, String ids) {
-        return DbNote.Column._ID + " IN (SELECT DISTINCT a." + DbNote.Column._ID + " FROM " +
-               DbNote.TABLE + " b, " + DbNote.TABLE + " a WHERE " +
-               "a." + DbNote.Column.BOOK_ID + " = " + bookId + " AND " +
-               "b." + DbNote.Column.BOOK_ID + " = " + bookId + " AND " +
-               "b." + DbNote.Column._ID + " IN (" + ids + ") AND " +
-               "a." + DbNote.Column.IS_CUT + " = 0 AND " +
-               "b." + DbNote.Column.LFT + " <= a." + DbNote.Column.LFT + " AND a." + DbNote.Column.RGT + " <= b." + DbNote.Column.RGT + ")";
+        return DbNote.Column._ID + " IN (SELECT DISTINCT d." + DbNote.Column._ID + " FROM " +
+               DbNote.TABLE + " n, " + DbNote.TABLE + " d WHERE " +
+               "d." + DbNote.Column.BOOK_ID + " = " + bookId + " AND " +
+               "n." + DbNote.Column.BOOK_ID + " = " + bookId + " AND " +
+               "n." + DbNote.Column._ID + " IN (" + ids + ") AND " +
+               "d." + DbNote.Column.IS_CUT + " = 0 AND " +
+               "n." + DbNote.Column.LFT + " <= d." + DbNote.Column.LFT + " AND d." + DbNote.Column.RGT + " <= n." + DbNote.Column.RGT + ")";
     }
 
     public static long getId(SQLiteDatabase db, String table, String selection, String[] selectionArgs) {
@@ -246,19 +250,5 @@ public class DatabaseUtils {
         }
 
         return 0;
-    }
-
-    public static void updateParentIds(SQLiteDatabase db, long bookId) {
-        long t = System.currentTimeMillis();
-
-        String parentId = "(SELECT " + DbNote.Column._ID + " FROM " + DbNote.TABLE + " AS n WHERE " +
-                          DbNote.Column.BOOK_ID + " = " + bookId + " AND " +
-                          "n." + DbNote.Column.LFT + " < " + DbNote.TABLE + "." + DbNote.Column.LFT + " AND " +
-                          DbNote.TABLE + "." + DbNote.Column.RGT + " < n." + DbNote.Column.RGT + " ORDER BY n." + DbNote.Column.LFT + " DESC LIMIT 1)";
-
-        db.execSQL("UPDATE " + DbNote.TABLE + " SET " + DbNote.Column.PARENT_ID + " = " + parentId + " WHERE " + whereUncutBookNotes(bookId));
-
-        if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, "" + (System.currentTimeMillis() - t) + "ms");
-
     }
 }

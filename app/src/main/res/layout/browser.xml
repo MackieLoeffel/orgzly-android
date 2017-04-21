@@ -30,7 +30,7 @@
             android:minHeight="48dp"
             android:gravity="center"
             android:padding="@dimen/padding_4"
-            android:text="@string/directory_sample"
+            tools:text="@string/directory_sample"
             android:textSize="?attr/browser_text_size"
             android:textStyle="bold"/>
     </LinearLayout>
@@ -62,7 +62,7 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:text="@string/create"/>
+            android:text="@string/new_"/>
 
         <Button
             android:id="@+id/browser_button_use"

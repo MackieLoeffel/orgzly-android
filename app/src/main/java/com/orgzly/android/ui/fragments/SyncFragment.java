@@ -31,7 +31,7 @@ import com.orgzly.R;
 import com.orgzly.android.Book;
 import com.orgzly.android.BookAction;
 import com.orgzly.android.BookName;
-import com.orgzly.android.Broadcasts;
+import com.orgzly.android.AppIntent;
 import com.orgzly.android.Filter;
 import com.orgzly.android.Note;
 import com.orgzly.android.NotesBatch;
@@ -164,7 +164,7 @@ public class SyncFragment extends Fragment {
         setRetainInstance(true);
 
         LocalBroadcastManager.getInstance(getContext())
-                .registerReceiver(syncServiceReceiver, new IntentFilter(Broadcasts.ACTION_SYNC_STATUS));
+                .registerReceiver(syncServiceReceiver, new IntentFilter(AppIntent.ACTION_SYNC_STATUS));
     }
 
     @Override
@@ -1132,9 +1132,16 @@ public class SyncFragment extends Fragment {
 
             SyncService.LocalBinder binder = (SyncService.LocalBinder) serviceBinder;
 
-            /* Get current sync status from the service and update the button. */
-            SyncStatus status = binder.getService().getStatus();
-            mSyncButton.update(status);
+            /*
+             * Check for activity added due to tests sometimes triggering:
+             * java.lang.IllegalStateException: Fragment SyncFragment{782d3f6} not attached to Activity
+             * Probably not specific to tests.
+             */
+            if (getActivity() != null) {
+                /* Get current sync status from the service and update the button. */
+                SyncStatus status = binder.getService().getStatus();
+                mSyncButton.update(status);
+            }
 
             unbindFromSyncService();
         }

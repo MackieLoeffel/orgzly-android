@@ -208,6 +208,17 @@ public class AppPreferences {
                 context.getResources().getString(R.string.pref_default_value_book_name_in_search));
     }
 
+    public static boolean inheritedTagsInSearchResults(Context context) {
+        return getDefaultSharedPreferences(context).getBoolean(
+                context.getResources().getString(R.string.pref_key_display_inherited_tags_in_search_results),
+                context.getResources().getBoolean(R.bool.pref_default_display_inherited_tags_in_search_results));
+    }
+
+    public static void inheritedTagsInSearchResults(Context context, boolean value) {
+        String key = context.getResources().getString(R.string.pref_key_display_inherited_tags_in_search_results);
+        getDefaultSharedPreferences(context).edit().putBoolean(key, value).apply();
+    }
+
     public static String fontSize(Context context) {
         return getDefaultSharedPreferences(context).getString(
                 context.getResources().getString(R.string.pref_key_font_size),

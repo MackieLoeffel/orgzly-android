@@ -1,5 +1,6 @@
 package com.orgzly.android.provider;
 
+import android.annotation.SuppressLint;
 import android.content.ContentProvider;
 import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
@@ -36,6 +37,7 @@ import com.orgzly.android.provider.models.DbBookSync;
 import com.orgzly.android.provider.models.DbCurrentVersionedRook;
 import com.orgzly.android.provider.models.DbDbRepo;
 import com.orgzly.android.provider.models.DbNote;
+import com.orgzly.android.provider.models.DbNoteAncestor;
 import com.orgzly.android.provider.models.DbNoteProperty;
 import com.orgzly.android.provider.models.DbOrgRange;
 import com.orgzly.android.provider.models.DbOrgTimestamp;
@@ -71,7 +73,13 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static com.orgzly.android.provider.GenericDatabaseUtils.field;
 
 public class Provider extends ContentProvider {
     private static final String TAG = Provider.class.getName();
@@ -180,16 +188,16 @@ public class Provider extends ContentProvider {
             case ProviderUris.NOTES_ID_PROPERTIES:
                 id = Long.parseLong(uri.getPathSegments().get(1));
 
-                selection = DbNoteProperty.TABLE + "." + DbNoteProperty.Column.NOTE_ID + "=" + id;
+                selection = field(DbNoteProperty.TABLE, DbNoteProperty.Column.NOTE_ID) + "=" + id;
                 selectionArgs = null;
 
                 sortOrder = DbNoteProperty.Column.POSITION;
 
 
                 table = DbNoteProperty.TABLE + " " +
-                        GenericDatabaseUtils.join(DbProperty.TABLE, "tproperties", DbProperty._ID, DbNoteProperty.TABLE, DbNoteProperty.Column.PROPERTY_ID) +
-                        GenericDatabaseUtils.join(DbPropertyName.TABLE, "tpropertyname", DbPropertyName._ID, "tproperties", DbProperty.Column.NAME_ID) +
-                        GenericDatabaseUtils.join(DbPropertyValue.TABLE, "tpropertyvalue", DbPropertyValue._ID, "tproperties", DbProperty.Column.VALUE_ID);
+                        GenericDatabaseUtils.join(DbProperty.TABLE, "tproperties", DbProperty.Column._ID, DbNoteProperty.TABLE, DbNoteProperty.Column.PROPERTY_ID) +
+                        GenericDatabaseUtils.join(DbPropertyName.TABLE, "tpropertyname", DbPropertyName.Column._ID, "tproperties", DbProperty.Column.NAME_ID) +
+                        GenericDatabaseUtils.join(DbPropertyValue.TABLE, "tpropertyvalue", DbPropertyValue.Column._ID, "tproperties", DbProperty.Column.VALUE_ID);
 
                 projection = new String[] {
                         "tpropertyname." + DbPropertyName.Column.NAME,
@@ -220,17 +228,17 @@ public class Provider extends ContentProvider {
 
             case ProviderUris.CURRENT_ROOKS:
                 projection = new String[] {
-                        DbRepo.TABLE + "." + DbRepo.Column.REPO_URL,
-                        DbRookUrl.TABLE + "." + DbRookUrl.Column.ROOK_URL,
-                        DbVersionedRook.TABLE + "." + DbVersionedRook.Column.ROOK_REVISION,
-                        DbVersionedRook.TABLE + "." + DbVersionedRook.Column.ROOK_MTIME,
+                        field(DbRepo.TABLE, DbRepo.Column.REPO_URL),
+                        field(DbRookUrl.TABLE, DbRookUrl.Column.ROOK_URL),
+                        field(DbVersionedRook.TABLE, DbVersionedRook.Column.ROOK_REVISION),
+                        field(DbVersionedRook.TABLE, DbVersionedRook.Column.ROOK_MTIME),
                 };
 
                 table = DbCurrentVersionedRook.TABLE +
-                        " LEFT JOIN " + DbVersionedRook.TABLE + " ON (" + DbVersionedRook.TABLE + "." + DbVersionedRook.Column._ID + "=" + DbCurrentVersionedRook.TABLE + "." + DbCurrentVersionedRook.Column.VERSIONED_ROOK_ID + ")" +
-                        " LEFT JOIN " + DbRook.TABLE + " ON (" + DbRook.TABLE + "." + DbRook.Column._ID + "=" + DbVersionedRook.TABLE + "." + DbVersionedRook.Column.ROOK_ID + ")" +
-                        " LEFT JOIN " + DbRookUrl.TABLE + " ON (" + DbRookUrl.TABLE + "." + DbRookUrl.Column._ID + "=" + DbRook.TABLE + "." + DbRook.Column.ROOK_URL_ID + ")" +
-                        " LEFT JOIN " + DbRepo.TABLE + " ON (" + DbRepo.TABLE + "." + DbRepo.Column._ID + "=" + DbRook.TABLE + "." + DbRook.Column.REPO_ID + ")" +
+                        " LEFT JOIN " + DbVersionedRook.TABLE + " ON (" + field(DbVersionedRook.TABLE, DbVersionedRook.Column._ID) + "=" + field(DbCurrentVersionedRook.TABLE, DbCurrentVersionedRook.Column.VERSIONED_ROOK_ID) + ")" +
+                        " LEFT JOIN " + DbRook.TABLE + " ON (" + field(DbRook.TABLE, DbRook.Column._ID) + "=" + field(DbVersionedRook.TABLE, DbVersionedRook.Column.ROOK_ID) + ")" +
+                        " LEFT JOIN " + DbRookUrl.TABLE + " ON (" + field(DbRookUrl.TABLE, DbRookUrl.Column._ID) + "=" + field(DbRook.TABLE, DbRook.Column.ROOK_URL_ID) + ")" +
+                        " LEFT JOIN " + DbRepo.TABLE + " ON (" + field(DbRepo.TABLE, DbRepo.Column._ID) + "=" + field(DbRook.TABLE, DbRook.Column.REPO_ID) + ")" +
                         "";
                 break;
 
@@ -255,35 +263,33 @@ public class Provider extends ContentProvider {
     private Cursor queryNotesSearchQueried(SQLiteDatabase db, String query, String sortOrder) {
         SearchQuery searchQuery = new SearchQuery(query);
 
-        String table;
         StringBuilder selection = new StringBuilder();
         List<String> selectionArgs = new ArrayList<>();
 
-        table = NotesView.VIEW_NAME;
-
-        if (searchQuery.hasTags()) {
-            List<String> whereTags = new ArrayList<>();
-
-            /*
-             * We are only searching for a tag within a string of tags.
-             * "tag" will be found in "few tagy ones"
-             */
-            for (String tag: searchQuery.getTags()) {
-                whereTags.add("n1." + DbNote.Column.TAGS + " LIKE ?");
-                selectionArgs.add("%" + tag + "%");
-            }
-
-            table = "(select n2.* from " + NotesView.VIEW_NAME +
-                    " n1 LEFT OUTER JOIN " + NotesView.VIEW_NAME +
-                    " n2 WHERE " + TextUtils.join(" AND ", whereTags) + " AND " +
-                    " n1." + DbNote.Column.BOOK_ID + " = n2." + DbNote.Column.BOOK_ID + " AND " +
-                    " n1." + DbNote.Column.IS_CUT + " = 0 AND n2." + DbNote.Column.IS_CUT + " = 0 AND " +
-                    "(n1." + DbNote.Column.LFT + " <= n2." + DbNote.Column.LFT +
-                    " and n2." + DbNote.Column.RGT + " <= n1." + DbNote.Column.RGT + ") GROUP BY n2._id) n";
-        }
-
         /* Skip cut notes. */
         selection.append(DatabaseUtils.WHERE_EXISTING_NOTES);
+
+        /*
+         * We are only searching for a tag within a string of tags.
+         * "tag" will be found in "few tagy ones"
+         */
+        for (String tag: searchQuery.getTags()) {
+            selection.append(" AND (")
+                    .append(ProviderContract.Notes.QueryParam.TAGS).append(" LIKE ? OR ")
+                    .append(ProviderContract.Notes.QueryParam.INHERITED_TAGS).append(" LIKE ?)");
+
+            selectionArgs.add("%" + tag + "%");
+            selectionArgs.add("%" + tag + "%");
+        }
+
+        for (String tag: searchQuery.getNotTags()) {
+            selection.append(" AND (")
+                    .append("COALESCE(").append(ProviderContract.Notes.QueryParam.TAGS).append(", '')").append(" NOT LIKE ? AND ")
+                    .append("COALESCE(").append(ProviderContract.Notes.QueryParam.INHERITED_TAGS).append(", '')").append(" NOT LIKE ?)");
+
+            selectionArgs.add("%" + tag + "%");
+            selectionArgs.add("%" + tag + "%");
+        }
 
         if (searchQuery.hasBookName()) {
             selection.append(" AND ").append(ProviderContract.Notes.QueryParam.BOOK_NAME).append(" = ?");
@@ -310,11 +316,11 @@ public class Provider extends ContentProvider {
         }
 
         for (String token: searchQuery.getTextSearch()) {
-            selection.append(" AND (" + ProviderContract.Notes.QueryParam.TITLE + " LIKE ?");
+            selection.append(" AND (").append(ProviderContract.Notes.QueryParam.TITLE).append(" LIKE ?");
             selectionArgs.add("%" + token + "%");
-            selection.append(" OR " + ProviderContract.Notes.QueryParam.CONTENT + " LIKE ?");
+            selection.append(" OR ").append(ProviderContract.Notes.QueryParam.CONTENT).append(" LIKE ?");
             selectionArgs.add("%" + token + "%");
-            selection.append(" OR " + ProviderContract.Notes.QueryParam.TAGS + " LIKE ?");
+            selection.append(" OR ").append(ProviderContract.Notes.QueryParam.TAGS).append(" LIKE ?");
             selectionArgs.add("%" + token + "%");
             selection.append(")");
         }
@@ -345,12 +351,12 @@ public class Provider extends ContentProvider {
              * Tags must be kept separately so we can match them exactly.
              */
             for (String tag: searchQuery.getNoteTags()) {
-                selection.append(" AND " + ProviderContract.Notes.QueryParam.TAGS + " LIKE ?");
+                selection.append(" AND ").append(ProviderContract.Notes.QueryParam.TAGS).append(" LIKE ?");
                 selectionArgs.add("%" + tag + "%");
             }
         }
 
-        String sql = "SELECT * FROM " + table + " WHERE " + selection.toString() + " ORDER BY " + sortOrder;
+        String sql = "SELECT * FROM " + NotesView.VIEW_NAME + " WHERE " + selection.toString() + " ORDER BY " + sortOrder;
 
         if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, sql, selectionArgs);
         return db.rawQuery(sql, selectionArgs.toArray(new String[selectionArgs.size()]));
@@ -390,7 +396,7 @@ public class Provider extends ContentProvider {
 
     @Override
     public int bulkInsert(Uri uri, ContentValues[] values) {
-        if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, uri.toString(), values);
+        if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, uri.toString());
 
         /* Gets a writable database. This will trigger its creation if it doesn't already exist. */
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
@@ -400,6 +406,7 @@ public class Provider extends ContentProvider {
             for (int i = 0; i < values.length; i++) {
                 insertUnderTransaction(db, uri, values[i]);
             }
+
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
@@ -412,7 +419,7 @@ public class Provider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues contentValues) {
-        if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, uri.toString(), contentValues);
+        if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, uri.toString());
 
         /* Gets a writable database. This will trigger its creation if it doesn't already exist. */
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
@@ -426,6 +433,7 @@ public class Provider extends ContentProvider {
             db.beginTransaction();
             try {
                 resultUri = insertUnderTransaction(db, uri, contentValues);
+
                 db.setTransactionSuccessful();
             } finally {
                 db.endTransaction();
@@ -478,15 +486,14 @@ public class Provider extends ContentProvider {
                 noteId = contentValues.getAsLong(ProviderContract.NoteProperties.Param.NOTE_ID);
                 String name = contentValues.getAsString(ProviderContract.NoteProperties.Param.NAME);
                 String value = contentValues.getAsString(ProviderContract.NoteProperties.Param.VALUE);
-                int position = contentValues.getAsInteger(ProviderContract.NoteProperties.Param.POSITION);
+                int pos = contentValues.getAsInteger(ProviderContract.NoteProperties.Param.POSITION);
 
-                id = new DbNoteProperty(
-                        noteId,
-                        position,
-                        new DbProperty(new DbPropertyName(name), new DbPropertyValue(value))
-                ).save(db);
+                long nameId = DbPropertyName.getOrInsert(db, name);
+                long valueId = DbPropertyValue.getOrInsert(db, value);
+                long propertyId = DbProperty.getOrInsert(db, nameId, valueId);
+                long notePropertyId = DbNoteProperty.getOrInsert(db, noteId, pos, propertyId);
 
-                return ContentUris.withAppendedId(uri, id);
+                return ContentUris.withAppendedId(uri, notePropertyId);
 
             case ProviderUris.LOAD_BOOK_FROM_FILE:
                 resultUri = loadBookFromFile(contentValues);
@@ -589,8 +596,11 @@ public class Provider extends ContentProvider {
                 /* Make space for new note - increment notes' LFT and RGT. */
                 DatabaseUtils.makeSpaceForNewNotes(db, 1, refNotePos, place);
 
-                /* Update number of descendants. */
-                updateDescendantsCountOfAncestors(db, bookId, notePos.getLft(), notePos.getRgt());
+                /*
+                 * If new note can be an ancestor, increment descendants count of all
+                 * its ancestors.
+                 */
+                incrementDescendantsCountForAncestors(db, bookId, notePos.getLft(), notePos.getRgt());
 
             case UNDEFINED:
                 /* Make space for new note - increment root's RGT. */
@@ -606,10 +616,24 @@ public class Provider extends ContentProvider {
 
         long id = db.insertOrThrow(DbNote.TABLE, null, values);
 
+        db.execSQL("INSERT INTO " + DbNoteAncestor.TABLE +
+                   " (" + DbNoteAncestor.Column.BOOK_ID + ", " +
+                   DbNoteAncestor.Column.NOTE_ID +
+                   ", " + DbNoteAncestor.Column.ANCESTOR_NOTE_ID + ") " +
+                   "SELECT " + field(DbNote.TABLE, DbNote.Column.BOOK_ID) + ", " +
+                   field(DbNote.TABLE, DbNote.Column._ID) + ", " +
+                   field("a", DbNote.Column._ID) +
+                   " FROM " + DbNote.TABLE +
+                   " JOIN " + DbNote.TABLE + " a ON (" +
+                   field(DbNote.TABLE, DbNote.Column.BOOK_ID) + " = " + field("a", DbNote.Column.BOOK_ID) + " AND " +
+                   field("a", DbNote.Column.LFT) + " < " + field(DbNote.TABLE, DbNote.Column.LFT) + " AND " +
+                   field(DbNote.TABLE, DbNote.Column.RGT) + " < " + field("a", DbNote.Column.RGT) + ")" +
+                   " WHERE " + field(DbNote.TABLE, DbNote.Column._ID) + " = " + id + " AND " + field("a", DbNote.Columns.LEVEL) + " > 0");
+
         return ContentUris.withAppendedId(uri, id);
     }
 
-    private void updateDescendantsCountOfAncestors(SQLiteDatabase db, long bookId, long lft, long rgt) {
+    private void incrementDescendantsCountForAncestors(SQLiteDatabase db, long bookId, long lft, long rgt) {
         db.execSQL("UPDATE " + DbNote.TABLE +
                    " SET " + ProviderContract.Notes.UpdateParam.DESCENDANTS_COUNT + " = " + ProviderContract.Notes.UpdateParam.DESCENDANTS_COUNT + " + 1 " +
                    "WHERE " + DatabaseUtils.whereAncestors(bookId, lft, rgt));
@@ -781,6 +805,7 @@ public class Provider extends ContentProvider {
             db.beginTransaction();
             try {
                 result = deleteUnderTransaction(db, uri, selection, selectionArgs);
+
                 db.setTransactionSuccessful();
             } finally {
                 db.endTransaction();
@@ -886,7 +911,7 @@ public class Provider extends ContentProvider {
 
     @Override
     public int update(Uri uri, ContentValues contentValues, String selection, String[] selectionArgs) {
-        if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, uri.toString(), contentValues, selection, selectionArgs);
+        if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, uri.toString(), selection, selectionArgs);
 
         /* Only used by tests. Changing database name so we don't overwrite user's real data. */
         if (uris.matcher.match(uri) == ProviderUris.DB_SWITCH) {
@@ -906,6 +931,7 @@ public class Provider extends ContentProvider {
             db.beginTransaction();
             try {
                 result = updateUnderTransaction(db, uri, contentValues, selection, selectionArgs);
+
                 db.setTransactionSuccessful();
             } finally {
                 db.endTransaction();
@@ -1345,6 +1371,40 @@ public class Provider extends ContentProvider {
         /* Delete all notes from book. TODO: Delete all other references to this book ID */
         db.delete(DbNote.TABLE, DbNote.Column.BOOK_ID + "=" + bookId, null);
 
+        final Map<String, Long> propertyNames = new HashMap<>();
+        {
+            Cursor cursor = db.query(DbPropertyName.TABLE, new String[] {DbPropertyName.Column._ID, DbPropertyName.Column.NAME}, null, null, null, null, null);
+            try {
+                for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
+                    propertyNames.put(cursor.getString(1), cursor.getLong(0));
+                }
+            } finally {
+                cursor.close();
+            }
+        }
+
+        final Map<String, Long> propertyValues = new HashMap<>();
+        {
+            Cursor cursor = db.query(DbPropertyValue.TABLE, new String[] {DbPropertyValue.Column._ID, DbPropertyValue.Column.VALUE}, null, null, null, null, null);
+            try {
+                for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
+                    propertyValues.put(cursor.getString(1), cursor.getLong(0));
+                }
+            } finally {
+                cursor.close();
+            }
+        }
+
+        /*
+         * Maps node's lft to database id.
+         * Used to update parent id and insert ancestors.
+         * Not using SparseArray as speed is preferred over memory here.
+         */
+        @SuppressLint("UseSparseArrays") final HashMap<Long,Long> lft2id = new HashMap<>();
+
+        /* Set of ids for which parent is already set. */
+        final Set<Long> notesWithParentSet = new HashSet<>();
+
         /* Open reader. */
         Reader reader = new BufferedReader(inReader);
         try {
@@ -1369,29 +1429,58 @@ public class Provider extends ContentProvider {
                             position.setRgt(node.getRgt());
                             position.setLevel(node.getLevel());
                             position.setDescendantsCount(node.getDescendantsCount());
-                            position.setFoldedUnderId(0);
 
                             ContentValues values = new ContentValues();
 
                             DbNote.toContentValues(values, position);
                             DbNote.toContentValues(db, values, node.getHead());
-                            // NotesClient.toContentValues(values, node.getHead());
 
                             long noteId = db.insertOrThrow(DbNote.TABLE, null, values);
 
-                            // replaceTimestampRangeStringsWithIds(db, values);
-                            // replacePropertiesWithIds(db, noteId, values);
-
-                            /* Insert properties for newly created note. */
+                            /* Insert note's properties. */
                             int i = 0;
                             for (OrgProperty property: node.getHead().getProperties()) {
-                                new DbNoteProperty(
-                                        noteId,
-                                        i++,
-                                        new DbProperty(
-                                                new DbPropertyName(property.getName()),
-                                                new DbPropertyValue(property.getValue()))
-                                ).save(db);
+                                Long nameId = propertyNames.get(property.getName());
+                                if (nameId == null) {
+                                    nameId = DbPropertyName.getOrInsert(db, property.getName());
+                                    propertyNames.put(property.getName(), nameId);
+                                }
+
+                                Long valueId = propertyValues.get(property.getValue());
+                                if (valueId == null) {
+                                    valueId = DbPropertyValue.getOrInsert(db, property.getValue());
+                                    propertyValues.put(property.getValue(), valueId);
+                                }
+
+                                long propertyId = DbProperty.getOrInsert(db, nameId, valueId);
+
+                                DbNoteProperty.getOrInsert(db, noteId, i, propertyId);
+                            }
+
+                            /*
+                             * Update parent ID and insert ancestors.
+                             * Going through all descendants - nodes between lft and rgt.
+                             *
+                             *  lft:  1    2    3    4    5   6
+                             *            L2   l1   r2   R2
+                             */
+                            lft2id.put(node.getLft(), noteId);
+                            for (long index = node.getLft() + 1; index < node.getRgt(); index++) {
+                                Long descendantId = lft2id.get(index);
+                                if (descendantId != null) {
+                                    if (! notesWithParentSet.contains(descendantId)) {
+                                        values = new ContentValues();
+                                        values.put(DbNote.Column.PARENT_ID, noteId);
+                                        db.update(DbNote.TABLE, values, DbNote.Column._ID + " = " + descendantId, null);
+                                        notesWithParentSet.add(descendantId);
+                                    }
+
+                                    values = new ContentValues();
+                                    values.put(DbNoteAncestor.Column.NOTE_ID, descendantId);
+                                    values.put(DbNoteAncestor.Column.ANCESTOR_NOTE_ID, noteId);
+                                    values.put(DbNoteAncestor.Column.BOOK_ID, bookId);
+                                    db.insert(DbNoteAncestor.TABLE, null, values);
+                                }
                             }
                         }
 
@@ -1403,7 +1492,7 @@ public class Provider extends ContentProvider {
 
                             BooksClient.toContentValues(values, file.getSettings());
 
-                                /* Set preface. TODO: Move to and rename OrgFileSettings */
+                            /* Set preface. TODO: Move to and rename OrgFileSettings */
                             values.put(DbBook.Column.PREFACE, file.getPreface());
 
                             values.put(DbBook.Column.USED_ENCODING, usedEncoding);
@@ -1421,21 +1510,19 @@ public class Provider extends ContentProvider {
             reader.close();
         }
 
+        if (BuildConfig.LOG_DEBUG)
+            LogUtils.d(TAG, bookName + ": Parsing done in " +
+                            (System.currentTimeMillis() - startedAt) + " ms");
+
         if (rookUrl != null) {
             updateOrInsertBookLink(db, bookId, repoUrl, rookUrl);
             updateOrInsertBookSync(db, bookId, repoUrl, rookUrl, rookRevision, rookMtime);
         }
 
-        DatabaseUtils.updateParentIds(db, bookId);
-
-        /* Update book with modification time and mark it as complete. */
+        /* Mark book as complete. */
         ContentValues values = new ContentValues();
         values.put(DbBook.Column.IS_DUMMY, 0);
-
         db.update(DbBook.TABLE, values, DbBook.Column._ID + "=" + bookId, null);
-
-
-        if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, bookName + ": " + (System.currentTimeMillis() - startedAt) + "ms");
 
         return uri;
     }
