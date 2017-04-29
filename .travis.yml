@@ -15,10 +15,10 @@ android:
     - sys-img-armeabi-v7a-android-25
     - sys-img-armeabi-v7a-android-14
 
-    licenses:
-      - 'android-sdk-preview-license-.+'
-      - 'android-sdk-license-.+'
-      - 'google-gdk-license-.+'
+  licenses:
+    - 'android-sdk-preview-license-.+'
+    - 'android-sdk-license-.+'
+    - 'google-gdk-license-.+'
 
 script:
   - ./gradlew build connectedAndroidTest
