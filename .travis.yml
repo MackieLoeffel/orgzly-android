@@ -9,3 +9,4 @@ android:
 
     # if you need to run emulator(s) during your tests
     - sys-img-armeabi-v7a-android-25
+    - sys-img-armeabi-v7a-android-14
