@@ -24,7 +24,7 @@ android:
 
 env:
   global:
-    - API=25 # Android API level 25 by default
+    - API=19 # Android API level 25 by default
     - TAG=google_apis # Google APIs by default, alternatively use default
     - ABI=armeabi-v7a # ARM ABI v7a by default
     - QEMU_AUDIO_DRV=none # Disable emulator audio to avoid warning
@@ -54,13 +54,13 @@ install:
   - sdkmanager --uninstall "platforms;android-16"
   - sdkmanager --uninstall "platforms;android-17"
   - sdkmanager --uninstall "platforms;android-18"
-  - sdkmanager --uninstall "platforms;android-19"
+  # - sdkmanager --uninstall "platforms;android-19"
   - sdkmanager --uninstall "platforms;android-20"
   - sdkmanager --uninstall "platforms;android-21"
   - sdkmanager --uninstall "build-tools;21.1.2"
   # Update sdk tools to latest version and install/update components
   - echo yes | sdkmanager "tools"
-  - echo yes | sdkmanager "platforms;android-25" # Latest platform required by SDK tools
+  # - echo yes | sdkmanager "platforms;android-25" # Latest platform required by SDK tools
   - echo yes | sdkmanager "platforms;android-${API}" # Android platform required by emulator
   - echo yes | sdkmanager "extras;android;m2repository"
   - echo yes | sdkmanager "extras;google;m2repository"
