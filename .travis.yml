@@ -1,24 +1,32 @@
 language: android
-jdk: oraclejdk8
+
+jdk:
+  - oraclejdk8
+
+# we need the following license copying, cause travis fails to cooperate with android licenses
+# just so you know, those are not my licenses. Somebody posted them on StackOverflow.
+before_install:
+  - mkdir "$ANDROID_HOME/licenses" || true
+  - echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55" > "$ANDROID_HOME/licenses/android-sdk-license"
+  - echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license"
+
 android:
   components:
     - tools
     - tools
     - platform-tools
-    # The BuildTools version used by your project
     - build-tools-25.0.2
-
-    # The SDK version used to compile your project
     - android-25
-
-    # if you need to run emulator(s) during your tests
+    - extra-google-m2repository
     - sys-img-armeabi-v7a-android-25
-    - sys-img-armeabi-v7a-android-14
 
-  licenses:
-    - 'android-sdk-preview-license-.+'
-    - 'android-sdk-license-.+'
-    - 'google-gdk-license-.+'
+sudo: false
 
-script:
-  - ./gradlew build connectedAndroidTest
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+cache:
+  directories:
+  - $HOME/.gradle/caches/
+  - $HOME/.gradle/wrapper/
+  - $HOME/.android/build-cache
