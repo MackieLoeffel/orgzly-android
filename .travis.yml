@@ -1,6 +1,6 @@
 language: android
 jdk: oraclejdk8
-sudo: false
+sudo: required
 
 before_cache:
   - rm -f ${TRAVIS_BUILD_DIR}/gradle/caches/modules-2/modules-2.lock # Avoid to repack it due locks
@@ -11,9 +11,6 @@ cache:
   directories:
     - ${TRAVIS_BUILD_DIR}/gradle/caches/
     - ${TRAVIS_BUILD_DIR}/gradle/wrapper/dists/
-
-notifications:
-  email: false
 
 android:
   components: # Cookbooks version: https://github.com/travis-ci/travis-cookbooks/tree/9c6cd11
