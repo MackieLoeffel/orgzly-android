@@ -91,7 +91,7 @@ before_script:
 
 script:
   # Run all device checks
-  - travis_wait 60 ./gradlew connectedCheck
+  - travis_wait 60 ./gradlew connectedCheck -PdisablePreDex
 
 after_script:
   # Show tests and lint results
