@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
+        android:name=".android.App"
         android:allowBackup="true"
         android:supportsRtl="true"
         android:icon="@drawable/cic_orgzly_logo"
@@ -70,6 +71,17 @@
         <!--</activity>-->
 
         <activity
+            android:name="com.orgzly.android.ui.BookChooserActivity"
+            android:label="@string/book_shortcut_label"
+            android:icon="@drawable/cic_orgzly_logo_with_notebook">
+
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_SHORTCUT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name="com.dropbox.core.android.AuthActivity"
             android:configChanges="orientation|keyboard"
             android:launchMode="singleTask">
@@ -83,6 +95,26 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name="com.orgzly.android.widgets.FilterSelectDialogActivity"
+            android:launchMode="singleInstance"
+            android:theme="@style/Theme.AppCompat.Light.Dialog"
+            android:excludeFromRecents="true"/>
+
+        <receiver android:name="com.orgzly.android.widgets.ListWidgetProvider"
+            android:label="@string/list_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/list_widget_info" />
+        </receiver>
+
+        <service
+            android:name=".android.widgets.ListWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
         <!-- Not exported (not made available to other applications). -->
         <provider android:name=".android.provider.Provider"
             android:exported="false"
@@ -90,6 +122,7 @@
         </provider>
 
         <service android:name=".android.sync.SyncService" android:exported="true"/>
+        <service android:name=".android.reminders.ReminderService"/>
 
         <receiver android:name=".android.BootCompletedReceiver">
             <intent-filter>

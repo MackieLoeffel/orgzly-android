@@ -204,6 +204,9 @@
 
     <string name="no_filters">You have no saved searches</string>
 
+    <string name="book_shortcut_label">Orgzly notebook</string>
+    <string name="pick_a_notebook">Pick a notebook</string>
+
     <!-- TODO: Use for note moving cab menu (xml) -->
     <string name="down">Down</string>
     <string name="up">Up</string>
@@ -275,6 +278,8 @@
 
     <string name="org_file_format">Org file format</string>
     <string name="separate_notes_with_new_line">Separate notes with an empty line</string>
+    <string name="separate_header_and_content_with_new_line">Separate header and content</string>
+    <string name="separate_header_and_content_with_new_line_summary">Separate header and content with an empty line</string>
     <string name="add_property">Add property</string>
 
     <string name="priority_a_highest">A (highest priority)</string>
@@ -367,9 +372,13 @@
     <string name="separate_notes_with_new_line_always">Always</string>
     <string name="separate_notes_with_new_line_multi_line_notes_only">Multiline notes only</string>
     <string name="separate_notes_with_new_line_never">Never</string>
+
     <string name="default_notebook">Default notebook</string>
     <string name="default_notebook_desc">Notebook used when sharing to Orgzly or creating a new note from the ongoing notification</string>
 
+    <string name="list_widget_name">Orgzly search</string>
+    <string name="select_a_filter">Select a filter</string>
+    <string name="select_a_filter_long">Select a filter by clicking on the title bar</string>
 
     <!-- These are just used in tools:text for layout preview and don't have to be translated,
          unless layout look depends on the translation. -->
@@ -400,4 +409,7 @@
     <string name="sync_button_sample">Last sync: Jan 01, 01:01</string>
     <string name="synced_rook_mtime_sample">Jul 3, 2013 9:45:37 PM</string>
     <string name="synced_rook_revision_sample">42f97fe238</string>
+    <string name="tap_to_view_notes">Tap to view your notes</string>
+    <string name="prefs_title_reminders">Reminders (beta)</string>
+    <string name="scheduled_times">Scheduled times</string>
 </resources>

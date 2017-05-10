@@ -12,7 +12,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Log;
-
 import com.orgzly.BuildConfig;
 import com.orgzly.android.Note;
 import com.orgzly.android.NotePosition;
@@ -146,7 +145,6 @@ public class Provider extends ContentProvider {
         /* Gets a readable database. This will trigger its creation if it doesn't already exist. */
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
 
-        long id;
         String table;
         Cursor cursor = null;
 
@@ -179,20 +177,19 @@ public class Provider extends ContentProvider {
             case ProviderUris.BOOKS_ID_NOTES:
                 table = NotesView.VIEW_NAME;
 
-                id = Long.parseLong(uri.getPathSegments().get(1));
+                long bookId = Long.parseLong(uri.getPathSegments().get(1));
 
-                selection = NotesView.Columns.BOOK_ID + "=" + id + " AND " + DatabaseUtils.WHERE_VISIBLE_NOTES;
+                selection = NotesView.Columns.BOOK_ID + "=" + bookId + " AND " + DatabaseUtils.WHERE_VISIBLE_NOTES;
                 selectionArgs = null;
                 break;
 
             case ProviderUris.NOTES_ID_PROPERTIES:
-                id = Long.parseLong(uri.getPathSegments().get(1));
+                long noteId = Long.parseLong(uri.getPathSegments().get(1));
 
-                selection = field(DbNoteProperty.TABLE, DbNoteProperty.Column.NOTE_ID) + "=" + id;
+                selection = field(DbNoteProperty.TABLE, DbNoteProperty.Column.NOTE_ID) + "=" + noteId;
                 selectionArgs = null;
 
                 sortOrder = DbNoteProperty.Column.POSITION;
-
 
                 table = DbNoteProperty.TABLE + " " +
                         GenericDatabaseUtils.join(DbProperty.TABLE, "tproperties", DbProperty.Column._ID, DbNoteProperty.TABLE, DbNoteProperty.Column.PROPERTY_ID) +
@@ -240,6 +237,27 @@ public class Provider extends ContentProvider {
                         " LEFT JOIN " + DbRookUrl.TABLE + " ON (" + field(DbRookUrl.TABLE, DbRookUrl.Column._ID) + "=" + field(DbRook.TABLE, DbRook.Column.ROOK_URL_ID) + ")" +
                         " LEFT JOIN " + DbRepo.TABLE + " ON (" + field(DbRepo.TABLE, DbRepo.Column._ID) + "=" + field(DbRook.TABLE, DbRook.Column.REPO_ID) + ")" +
                         "";
+                break;
+
+            case ProviderUris.TIMES:
+                String afterTime = uri.getQueryParameter(ProviderContract.Times.ContentUri.PARAM_AFTER_TIME);
+
+                table = null;
+                cursor = db.rawQuery("SELECT n._id as note_id, n.state as note_state, t.string as org_timestamp_string, n.title as note_title\n" +
+                                   "FROM org_ranges r\n" +
+                                   "JOIN org_timestamps t ON (r.start_timestamp_id = t._id)\n" +
+                                   "JOIN notes n ON (r._id = n.scheduled_range_id)\n" +
+                                   "WHERE t.is_active = 1 AND\n" +
+                                   "-- Times which either have repeater or are in the future\n" +
+                                   "-- i.e. times without repeater that are before given time are ignored\n" +
+                                   "( t.repeater_type IS NOT NULL OR\n" +
+                                   "  CASE WHEN t.hour IS NOT NULL\n" +
+                                   "       THEN t.timestamp/1000\n" +
+                                   "       -- If timestamp doesn't have a time part set,\n" +
+                                   "       -- assume end-of-day for the purposes of querying\n" +
+                                   "       -- to make sure they are picked up here.\n" +
+                                   "       ELSE CAST(strftime('%s', t.timestamp/1000, 'unixepoch', '+1 day') AS INTEGER) END >= ? / 1000\n" +
+                                   ")", new String[] { afterTime });
                 break;
 
             default:
@@ -363,6 +381,11 @@ public class Provider extends ContentProvider {
     }
 
     private static void appendBeforeInterval(StringBuilder selection, String column, SearchQuery.SearchQueryInterval interval) {
+        if (interval.none()) {
+            selection.append(" AND ").append(column).append(" IS NULL");
+            return;
+        }
+
         Calendar before = new GregorianCalendar();
 
         switch (interval.getUnit()) {
@@ -1012,8 +1035,8 @@ public class Provider extends ContentProvider {
                 result = db.update(DbNote.TABLE, contentValues, selection, selectionArgs);
 
                 // TODO: Ugh: Use /books/1/notes/23/ or just move to constant
-                if (uri.getQueryParameter("book-id") != null) {
-                    DatabaseUtils.updateBookMtime(db, Long.parseLong(uri.getQueryParameter("book-id")));
+                if (uri.getQueryParameter("bookId") != null) {
+                    DatabaseUtils.updateBookMtime(db, Long.parseLong(uri.getQueryParameter("bookId")));
                 }
 
                 return result;
@@ -1659,5 +1682,4 @@ public class Provider extends ContentProvider {
             }
         }
     }
-
 }

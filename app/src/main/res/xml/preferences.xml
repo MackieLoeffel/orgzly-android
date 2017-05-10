@@ -180,6 +180,13 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="@string/prefs_title_reminders">
+        <CheckBoxPreference
+            android:key="@string/pref_key_use_reminders_for_scheduled_times"
+            android:title="@string/scheduled_times"
+            android:defaultValue="@bool/pref_default_value_use_reminders_for_scheduled_times"/>
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="@string/org_file_format">
         <com.orgzly.android.prefs.ListPreferenceWithValueAsSummary
             android:key="@string/pref_key_separate_notes_with_new_line"
@@ -187,6 +194,12 @@
             android:entries="@array/separate_notes_with_new_line_names"
             android:entryValues="@array/separate_notes_with_new_line_values"
             android:defaultValue="@string/pref_default_separate_notes_with_new_line"/>
+
+        <CheckBoxPreference
+            android:key="@string/pref_key_separate_header_and_content_with_new_line"
+            android:title="@string/separate_header_and_content_with_new_line"
+            android:summary="@string/separate_header_and_content_with_new_line_summary"
+            android:defaultValue="@bool/pref_default_separate_header_and_content_with_new_line"/>
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/sync">
