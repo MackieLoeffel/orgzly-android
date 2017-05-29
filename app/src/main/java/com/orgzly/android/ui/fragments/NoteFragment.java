@@ -59,7 +59,7 @@ import com.orgzly.org.OrgProperty;
 import com.orgzly.org.datetime.OrgDateTime;
 import com.orgzly.org.datetime.OrgRange;
 import com.orgzly.org.OrgHead;
-import com.orgzly.android.StateChangeLogic;
+import com.orgzly.org.utils.StateChangeLogic;
 import com.orgzly.org.parser.OrgParserWriter;
 
 import java.util.ArrayList;
@@ -1107,10 +1107,7 @@ public class NoteFragment extends Fragment
     }
 
     private void updateNoteForStateChange(Context context, Note note, String state) {
-        StateChangeLogic stateSetOp = new StateChangeLogic(
-                AppPreferences.todoKeywordsSet(context),
-                AppPreferences.doneKeywordsSet(context)
-        );
+        StateChangeLogic stateSetOp = new StateChangeLogic(AppPreferences.doneKeywordsSet(context));
 
         stateSetOp.setState(state,
                 note.getHead().getState(),

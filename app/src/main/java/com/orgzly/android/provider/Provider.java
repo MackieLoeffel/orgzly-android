@@ -16,7 +16,7 @@ import com.orgzly.BuildConfig;
 import com.orgzly.android.Note;
 import com.orgzly.android.NotePosition;
 import com.orgzly.android.SearchQuery;
-import com.orgzly.android.StateChangeLogic;
+import com.orgzly.org.utils.StateChangeLogic;
 import com.orgzly.android.prefs.AppPreferences;
 import com.orgzly.android.provider.actions.ActionRunner;
 import com.orgzly.android.provider.actions.CutNotesAction;
@@ -243,21 +243,39 @@ public class Provider extends ContentProvider {
                 String afterTime = uri.getQueryParameter(ProviderContract.Times.ContentUri.PARAM_AFTER_TIME);
 
                 table = null;
-                cursor = db.rawQuery("SELECT n._id as note_id, n.state as note_state, t.string as org_timestamp_string, n.title as note_title\n" +
-                                   "FROM org_ranges r\n" +
-                                   "JOIN org_timestamps t ON (r.start_timestamp_id = t._id)\n" +
-                                   "JOIN notes n ON (r._id = n.scheduled_range_id)\n" +
-                                   "WHERE t.is_active = 1 AND\n" +
-                                   "-- Times which either have repeater or are in the future\n" +
-                                   "-- i.e. times without repeater that are before given time are ignored\n" +
-                                   "( t.repeater_type IS NOT NULL OR\n" +
-                                   "  CASE WHEN t.hour IS NOT NULL\n" +
-                                   "       THEN t.timestamp/1000\n" +
-                                   "       -- If timestamp doesn't have a time part set,\n" +
-                                   "       -- assume end-of-day for the purposes of querying\n" +
-                                   "       -- to make sure they are picked up here.\n" +
-                                   "       ELSE CAST(strftime('%s', t.timestamp/1000, 'unixepoch', '+1 day') AS INTEGER) END >= ? / 1000\n" +
-                                   ")", new String[] { afterTime });
+
+//                cursor = db.rawQuery("SELECT n._id as note_id, n.book_id, b.name, n.state as note_state, t.string as org_timestamp_string, n.title as note_title\n" +
+//                                   "FROM org_ranges r\n" +
+//                                   "JOIN org_timestamps t ON (r.start_timestamp_id = t._id)\n" +
+//                                   "JOIN notes n ON (r._id = n.scheduled_range_id)\n" +
+//                                   "JOIN books b ON (b._id = n.book_id)\n" +
+//                                   "WHERE t.is_active = 1 AND\n" +
+//                                   "-- Times which either have repeater or are in the future\n" +
+//                                   "-- i.e. times without repeater that are before given time are ignored\n" +
+//                                   "( t.repeater_type IS NOT NULL OR\n" +
+//                                   "  CASE WHEN t.hour IS NOT NULL\n" +
+//                                   "       THEN t.timestamp/1000\n" +
+//                                   "       -- If timestamp doesn't have a time part set,\n" +
+//                                   "       -- assume end-of-day for the purposes of querying\n" +
+//                                   "       -- to make sure they are picked up here.\n" +
+//                                   "       ELSE CAST(strftime('%s', t.timestamp/1000, 'unixepoch', '+1 day') AS INTEGER) END >= ? / 1000\n" +
+//                                   ")", new String[] { afterTime });
+
+                cursor = db.rawQuery("SELECT n._id as note_id, n.book_id, b.name, n.state as note_state, t.string as org_timestamp_string, n.title as note_title\n" +
+                                     "FROM org_ranges r\n" +
+                                     "JOIN org_timestamps t ON (r.start_timestamp_id = t._id)\n" +
+                                     "JOIN notes n ON (r._id = n.scheduled_range_id)\n" +
+                                     "JOIN books b ON (b._id = n.book_id)\n" +
+                                     "WHERE t.is_active = 1 AND\n" +
+                                     "-- Times that are in the future\n" +
+                                     "( CASE WHEN t.hour IS NOT NULL\n" +
+                                     "       THEN t.timestamp/1000\n" +
+                                     "       -- If timestamp doesn't have a time part set,\n" +
+                                     "       -- assume end-of-day for the purposes of querying\n" +
+                                     "       -- to make sure they are picked up here.\n" +
+                                     "       ELSE CAST(strftime('%s', t.timestamp/1000, 'unixepoch', '+1 day') AS INTEGER) END >= ? / 1000\n" +
+                                     ")", new String[] { afterTime });
+
                 break;
 
             default:
@@ -1109,22 +1127,22 @@ public class Provider extends ContentProvider {
 
         int notesUpdated;
 
-            /* Select only notes which don't already have the target state. */
+        /* Select only notes which don't already have the target state. */
         String notesSelection = DbNote.Column._ID + " IN (" + ids + ") AND (" +
                                 NotesView.Columns.STATE + " IS NULL OR " + NotesView.Columns.STATE + " != ?)";
 
         String[] selectionArgs = new String[] { targetState };
 
-            /* Select notebooks which will be affected. */
+        /* Select notebooks which will be affected. */
         String booksSelection = DbBook.Column._ID + " IN (SELECT DISTINCT " +
                                 DbNote.Column.BOOK_ID + " FROM " + DbNote.TABLE + " WHERE " + notesSelection + ")";
 
-            /* Notebooks must be updated before notes, because selection checks
-             * for notes what will be affected.
-             */
+        /* Notebooks must be updated before notes, because selection checks
+         * for notes what will be affected.
+         */
         DatabaseUtils.updateBookMtime(db, booksSelection, selectionArgs);
 
-            /* Update notes. */
+        /* Update notes. */
         if (AppPreferences.isDoneKeyword(getContext(), targetState)) {
             notesUpdated = setDoneStateForNotes(db, targetState, notesSelection, selectionArgs);
         } else {
@@ -1174,10 +1192,7 @@ public class Provider extends ContentProvider {
 
         try {
             for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
-                StateChangeLogic stateSetOp = new StateChangeLogic(
-                        AppPreferences.todoKeywordsSet(getContext()),
-                        AppPreferences.doneKeywordsSet(getContext())
-                );
+                StateChangeLogic stateSetOp = new StateChangeLogic(AppPreferences.doneKeywordsSet(getContext()));
 
                 stateSetOp.setState(state,
                         cursor.getString(3),
@@ -1461,7 +1476,7 @@ public class Provider extends ContentProvider {
                             long noteId = db.insertOrThrow(DbNote.TABLE, null, values);
 
                             /* Insert note's properties. */
-                            int i = 0;
+                            int pos = 1;
                             for (OrgProperty property: node.getHead().getProperties()) {
                                 Long nameId = propertyNames.get(property.getName());
                                 if (nameId == null) {
@@ -1477,7 +1492,7 @@ public class Provider extends ContentProvider {
 
                                 long propertyId = DbProperty.getOrInsert(db, nameId, valueId);
 
-                                DbNoteProperty.getOrInsert(db, noteId, i, propertyId);
+                                DbNoteProperty.getOrInsert(db, noteId, pos++, propertyId);
                             }
 
                             /*

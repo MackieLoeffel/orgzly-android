@@ -1,16 +1,12 @@
 package com.orgzly.android.reminders;
 
 import android.app.IntentService;
-import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
@@ -18,10 +14,12 @@ import com.evernote.android.job.JobManager;
 import com.evernote.android.job.JobRequest;
 import com.orgzly.BuildConfig;
 import com.orgzly.R;
+import com.orgzly.android.ActionService;
+import com.orgzly.android.AppIntent;
 import com.orgzly.android.Notifications;
 import com.orgzly.android.prefs.AppPreferences;
 import com.orgzly.android.provider.ProviderContract;
-import com.orgzly.android.ui.MainActivity;
+import com.orgzly.android.ui.util.ActivityUtils;
 import com.orgzly.android.util.LogUtils;
 import com.orgzly.org.datetime.OrgDateTime;
 import com.orgzly.org.datetime.OrgDateTimeUtils;
@@ -54,11 +52,6 @@ public class ReminderService extends IntentService {
         setIntentRedelivery(true);
     }
 
-    /**
-     * Receives events
-     *
-     * @param intent
-     */
     @Override
     protected void onHandleIntent(Intent intent) {
         if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, intent);
@@ -107,8 +100,7 @@ public class ReminderService extends IntentService {
     private void onDataChanged(DateTime now, DateTime prevRun) {
         if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, now, prevRun);
 
-        /* Cancel all jobs. */
-        JobManager.instance().cancelAllForTag(ReminderJob.TAG);
+        ReminderJob.cancelAll();
 
         DateTime fromTime = prevRun;
         if (prevRun == null) {
@@ -158,8 +150,7 @@ public class ReminderService extends IntentService {
     private void onJobTriggered(DateTime now, DateTime prevRun) {
         if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, now, prevRun);
 
-        /* Cancel all jobs. */
-        JobManager.instance().cancelAllForTag(ReminderJob.TAG);
+        ReminderJob.cancelAll();
 
         if (prevRun != null) {
             /* Show notifications for all notes with times from previous run until now. */
@@ -201,6 +192,8 @@ public class ReminderService extends IntentService {
             try {
                 for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
                     long noteId = cursor.getLong(ProviderContract.Times.ColumnIndex.NOTE_ID);
+                    long bookId = cursor.getLong(ProviderContract.Times.ColumnIndex.BOOK_ID);
+                    String bookName = cursor.getString(ProviderContract.Times.ColumnIndex.BOOK_NAME);
                     String noteState = cursor.getString(ProviderContract.Times.ColumnIndex.NOTE_STATE);
                     String noteTitle = cursor.getString(ProviderContract.Times.ColumnIndex.NOTE_TITLE);
                     String orgTimestampString = cursor.getString(ProviderContract.Times.ColumnIndex.ORG_TIMESTAMP_STRING);
@@ -210,14 +203,14 @@ public class ReminderService extends IntentService {
                     /* Skip if it's done-type state. */
                     if (noteState == null || !AppPreferences.doneKeywordsSet(context).contains(noteState)) {
                         List<DateTime> times = OrgDateTimeUtils.getTimesInInterval(
-                                orgDateTime, fromTime, beforeTime, 1);
+                                orgDateTime, fromTime, beforeTime, false, 1);
 
                         for (DateTime time : times) {
                             if (!orgDateTime.hasTime()) {
                                 time = time.plusHours(9); // TODO: Move to preferences
                             }
 
-                            result.add(new NoteWithTime(noteId, noteTitle, time, orgDateTime));
+                            result.add(new NoteWithTime(noteId, bookId, bookName, noteTitle, time, orgDateTime));
                         }
                     }
                 }
@@ -247,56 +240,91 @@ public class ReminderService extends IntentService {
         return result;
     }
 
-    public static class NoteWithTime {
+    static class NoteWithTime {
         public long id;
+        public long bookId;
+        public String bookName;
         public String title;
         public DateTime time;
         OrgDateTime orgDateTime;
 
-        public NoteWithTime(long id, String title, DateTime time, OrgDateTime orgDateTime) {
+        NoteWithTime(long id, long bookId, String bookName, String title, DateTime time, OrgDateTime orgDateTime) {
             this.id = id;
+            this.bookId = bookId;
+            this.bookName = bookName;
             this.title = title;
             this.time = time;
             this.orgDateTime = orgDateTime;
         }
     }
 
-    public static void showNotification(Context context, List<NoteWithTime> notes) {
+    private void showNotification(Context context, List<NoteWithTime> notes) {
         if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, context, notes);
 
         NotificationManager notificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-        // TODO: Open relevant notes, agenda or search results
-        Intent resultIntent = new Intent(context, MainActivity.class);
-        resultIntent.setAction(Intent.ACTION_MAIN);
-
-        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
-        stackBuilder.addParentStack(MainActivity.class);
-        stackBuilder.addNextIntent(resultIntent);
-        PendingIntent resultPendingIntent =
-                stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
-                .setAutoCancel(true)
-                .setPriority(Notification.PRIORITY_MAX)
-                .setColor(ContextCompat.getColor(context, R.color.notification))
-                .setSmallIcon(R.drawable.cic_orgzly_notification)
-                .setContentIntent(resultPendingIntent);
-
-        /* Set notification sound. */
-//        Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-//        builder.setSound(alarmSound);
-
         for (int i = 0; i < notes.size(); i++) {
             NoteWithTime note = notes.get(i);
 
-            builder.setContentTitle(note.title);
-            builder.setContentText(context.getString(
-                    R.string.scheduled_using_time, note.orgDateTime.toStringWithoutBrackets()));
+            String notificationTag = String.valueOf(note.id);
+            int notificationId = Notifications.REMINDER;
 
-            notificationManager.notify(String.valueOf(note.id), Notifications.REMINDER, builder.build());
+            String line = context.getString(R.string.scheduled_using_time, note.orgDateTime.toStringWithoutBrackets());
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
+                    .setAutoCancel(true)
+                    .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setColor(ContextCompat.getColor(context, R.color.notification))
+                    .setSmallIcon(R.drawable.cic_orgzly_notification);
+
+            /* Set notification sound. */
+//            Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+//            builder.setSound(alarmSound);
+
+            builder.setContentTitle(note.title);
+            builder.setContentText(line);
+
+            builder.setStyle(new NotificationCompat.InboxStyle()
+                    .setSummaryText(note.bookName)
+                    .addLine(line)
+            );
+
+            /* Open note on notification click. */
+            PendingIntent openPi = ActivityUtils.mainActivityPendingIntent(context, note.bookId, note.id);
+            builder.setContentIntent(openPi);
+
+            /* Action text depending on repeater. */
+            String doneActionText = note.orgDateTime.hasRepeater() ?
+                    getString(R.string.complete_with_repeater, note.orgDateTime.getRepeater().toString()) :
+                    getString(R.string.complete);
+
+            builder.addAction(
+                    R.drawable.ic_done_white_24dp,
+                    doneActionText,
+                    markNoteAsDonePendingIntent(context, note.id, notificationTag, notificationId));
+
+            notificationManager.notify(notificationTag, notificationId, builder.build());
         }
+    }
+
+    private PendingIntent markNoteAsDonePendingIntent(
+            Context context, long noteId, String notificationTag, int notificationId) {
+        Intent intent = new Intent(context, ActionService.class);
+
+        intent.setAction(AppIntent.ACTION_NOTE_MARK_AS_DONE);
+
+        intent.putExtra(ActionService.EXTRA_NOTE_ID, noteId);
+
+        intent.putExtra(ActionService.EXTRA_NOTIFICATION_TAG, notificationTag);
+        intent.putExtra(ActionService.EXTRA_NOTIFICATION_ID, notificationId);
+
+        return PendingIntent.getService(
+                context,
+                Long.valueOf(noteId).intValue(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     /** Notify reminder service about changes that might affect scheduling of reminders. */

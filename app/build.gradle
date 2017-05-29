@@ -125,7 +125,7 @@ dependencies {
  * Being more specific with ../../orgzly/ on purpose.
  */
 def orgJavaLocation() {
-    File localOrgJavaDir = getRootProject().file('../org-java')
+    File localOrgJavaDir = getRootProject().file('../../orgzly/org-java')
 
     if (localOrgJavaDir.exists()) {
         return project(':org-java') // Defined in settings.gradle
