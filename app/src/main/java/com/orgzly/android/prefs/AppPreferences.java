@@ -195,6 +195,24 @@ public class AppPreferences {
                 context.getResources().getBoolean(R.bool.pref_default_value_use_reminders_for_scheduled_times));
     }
 
+    public static boolean remindersSound(Context context) {
+        return getDefaultSharedPreferences(context).getBoolean(
+                context.getResources().getString(R.string.pref_key_reminders_sound),
+                context.getResources().getBoolean(R.bool.pref_default_value_reminders_sound));
+    }
+
+    public static boolean remindersVibrate(Context context) {
+        return getDefaultSharedPreferences(context).getBoolean(
+                context.getResources().getString(R.string.pref_key_reminders_vibrate),
+                context.getResources().getBoolean(R.bool.pref_default_value_reminders_vibrate));
+    }
+
+    public static boolean showSyncNotifications(Context context) {
+        return getDefaultSharedPreferences(context).getBoolean(
+                context.getResources().getString(R.string.pref_key_show_sync_notifications),
+                context.getResources().getBoolean(R.bool.pref_default_value_show_sync_notifications));
+    }
+
     public static String colorScheme(Context context) {
         return getDefaultSharedPreferences(context).getString(
                 context.getResources().getString(R.string.pref_key_color_scheme),
@@ -442,11 +460,6 @@ public class AppPreferences {
     /*
      * ReminderService
      */
-
-    public static void reminderServiceJobId(Context context, int value) {
-        String key = context.getResources().getString(R.string.pref_key_reminder_service_job_id);
-        getStateSharedPreferences(context).edit().putInt(key, value).apply();
-    }
 
     public static void reminderServiceLastRun(Context context, long value) {
         String key = context.getResources().getString(R.string.pref_key_reminder_service_last_run);

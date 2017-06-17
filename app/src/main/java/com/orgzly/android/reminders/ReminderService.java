@@ -6,6 +6,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -21,6 +23,7 @@ import com.orgzly.android.prefs.AppPreferences;
 import com.orgzly.android.provider.ProviderContract;
 import com.orgzly.android.ui.util.ActivityUtils;
 import com.orgzly.android.util.LogUtils;
+import com.orgzly.android.util.OrgFormatter;
 import com.orgzly.org.datetime.OrgDateTime;
 import com.orgzly.org.datetime.OrgDateTimeUtils;
 
@@ -46,6 +49,8 @@ public class ReminderService extends IntentService {
     public static final int EVENT_JOB_TRIGGERED = 2;
     public static final int EVENT_UNKNOWN = -1;
 
+    private static final long[] SCHEDULED_NOTE_VIBRATE_PATTERN = new long[] { 500, 50, 50, 300 };
+
     public ReminderService() {
         super(TAG);
 
@@ -62,16 +67,9 @@ public class ReminderService extends IntentService {
         }
 
         DateTime now = new DateTime();
-
-        /* Previous run time. */
-        DateTime prevRun = null;
-        long prevRunMillis = AppPreferences.reminderServiceLastRun(this);
-        if (prevRunMillis > 0) {
-            prevRun = new DateTime(prevRunMillis);
-        }
+        DateTime prevRun = readLastRun();
 
         int event = intent.getIntExtra(EXTRA_EVENT, EVENT_UNKNOWN);
-
 
         if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, "Event: " + event);
         if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, " Prev: " + prevRun);
@@ -91,6 +89,21 @@ public class ReminderService extends IntentService {
                 return;
         }
 
+        writeLastRun(now);
+    }
+
+    private DateTime readLastRun() {
+        DateTime lastRun = null;
+
+        long lastRunMs = AppPreferences.reminderServiceLastRun(this);
+        if (lastRunMs > 0) {
+            lastRun = new DateTime(lastRunMs);
+        }
+
+        return lastRun;
+    }
+
+    private void writeLastRun(DateTime now) {
         AppPreferences.reminderServiceLastRun(this, now.getMillis());
     }
 
@@ -129,8 +142,6 @@ public class ReminderService extends IntentService {
 
             if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG,
                     "Scheduled for " + jobRunTimeString(jobId) + " (" + firstNote.title + ")");
-
-            AppPreferences.reminderServiceJobId(this, jobId);
 
         } else {
             if (BuildConfig.LOG_DEBUG) LogUtils.d(TAG, "No notes found after " + fromTime);
@@ -198,7 +209,7 @@ public class ReminderService extends IntentService {
                     String noteTitle = cursor.getString(ProviderContract.Times.ColumnIndex.NOTE_TITLE);
                     String orgTimestampString = cursor.getString(ProviderContract.Times.ColumnIndex.ORG_TIMESTAMP_STRING);
 
-                    OrgDateTime orgDateTime = OrgDateTime.getInstance(orgTimestampString);
+                    OrgDateTime orgDateTime = OrgDateTime.parse(orgTimestampString);
 
                     /* Skip if it's done-type state. */
                     if (noteState == null || !AppPreferences.doneKeywordsSet(context).contains(noteState)) {
@@ -279,11 +290,18 @@ public class ReminderService extends IntentService {
                     .setColor(ContextCompat.getColor(context, R.color.notification))
                     .setSmallIcon(R.drawable.cic_orgzly_notification);
 
-            /* Set notification sound. */
-//            Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-//            builder.setSound(alarmSound);
+            /* Set vibration. */
+            if (AppPreferences.remindersVibrate(context)) {
+                builder.setVibrate(SCHEDULED_NOTE_VIBRATE_PATTERN);
+            }
 
-            builder.setContentTitle(note.title);
+            /* Set notification sound. */
+            if (AppPreferences.remindersSound(context)) {
+                Uri sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                builder.setSound(sound);
+            }
+
+            builder.setContentTitle(OrgFormatter.parse(note.title, false));
             builder.setContentText(line);
 
             builder.setStyle(new NotificationCompat.InboxStyle()
@@ -297,8 +315,8 @@ public class ReminderService extends IntentService {
 
             /* Action text depending on repeater. */
             String doneActionText = note.orgDateTime.hasRepeater() ?
-                    getString(R.string.complete_with_repeater, note.orgDateTime.getRepeater().toString()) :
-                    getString(R.string.complete);
+                    getString(R.string.mark_as_done_with_repeater, note.orgDateTime.getRepeater().toString()) :
+                    getString(R.string.mark_as_done);
 
             builder.addAction(
                     R.drawable.ic_done_white_24dp,
@@ -339,5 +357,11 @@ public class ReminderService extends IntentService {
         Intent intent = new Intent(context, ReminderService.class);
         intent.putExtra(ReminderService.EXTRA_EVENT, ReminderService.EVENT_JOB_TRIGGERED);
         context.startService(intent);
+    }
+
+
+    public static void scheduledTimesToggled(Context context) {
+        /* Reset last run time if reminders are being enabled or disabled. */
+        AppPreferences.reminderServiceLastRun(context, 0L);
     }
 }

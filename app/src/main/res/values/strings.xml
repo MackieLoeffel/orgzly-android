@@ -26,8 +26,8 @@
     <string name="value">Value</string>
     <string name="query">Query</string>
     <string name="done">Done</string>
-    <string name="complete">Complete</string>
-    <string name="complete_with_repeater">Complete %s</string>
+    <string name="mark_as_done">Mark as done</string>
+    <string name="mark_as_done_with_repeater">Reschedule %s</string>
     <string name="close">Close</string>
     <string name="import_">Import</string> <!-- "import" is reserved -->
     <string name="imported">Imported</string>
@@ -165,6 +165,7 @@
     <string name="syncing_in_progress">Syncing…</string>
     <string name="syncing_book">Syncing %s…</string>
     <string name="syncing_failed">Sync: %s</string> <!-- Sync: Reason -->
+    <string name="syncing_failed_title">Sync failed</string>
     <string name="canceled">Canceled</string>
     <string name="canceling">Canceling…</string>
     <string name="directory">Directory</string>
@@ -238,8 +239,10 @@
     <string name="property_name">Property Name</string>
     <string name="created_at">Created at</string>
     <string name="insert_note_creation_time">Insert note\'s creation time</string>
+
     <string name="scheduled">Scheduled</string>
     <string name="scheduled_using_time">Scheduled using %s</string>
+
     <string name="scheduled_new_notes_for_today">Schedule new notes for today</string>
     <string name="state">State</string>
     <string name="fold_content">Fold content</string>
@@ -350,8 +353,17 @@
     <string name="display_inherited_tags_in_search_results">Inherited tags in search results</string>
     <string name="display_inherited_tags_in_search_results_summary">Display inherited tags in search results</string>
 
-    <string name="new_note_notification">New note</string>
-    <string name="new_note_notification_summary">Quickly create new note from notification drawer</string>
+    <string name="new_note_notification">Create note and sync</string>
+    <string name="new_note_notification_summary">Quickly create new note or sync notebooks from notification drawer</string>
+
+    <string name="show_sync_notifications_title">Sync status</string>
+    <string name="show_sync_notifications_summary">Display notification during sync and after sync failure</string>
+
+    <string name="prefs_title_reminders">Reminders (beta)</string>
+    <string name="pref_title_reminders_sound">Sound</string>
+    <string name="pref_title_reminders_vibrate">Vibrate</string>
+    <string name="pref_title_reminders_for_scheduled_times">Scheduled notes</string>
+    <string name="pref_title_summary_reminders_for_scheduled_times">Display notification for note with scheduled time</string>
 
     <string name="primary_storage">Main storage</string>
     <string name="secondary_storage">SD card</string>
@@ -419,5 +431,4 @@
     <string name="synced_rook_mtime_sample">Jul 3, 2013 9:45:37 PM</string>
     <string name="synced_rook_revision_sample">42f97fe238</string>
     <string name="tap_to_view_notes">Tap to view your notes</string>
-    <string name="pref_title_scheduled_times">Scheduled times (beta)</string>
 </resources>

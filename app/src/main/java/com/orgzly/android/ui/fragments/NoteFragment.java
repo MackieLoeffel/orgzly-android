@@ -51,7 +51,7 @@ import com.orgzly.android.ui.NotePlace;
 import com.orgzly.android.ui.dialogs.TimestampDialogFragment;
 import com.orgzly.android.ui.util.ActivityUtils;
 import com.orgzly.android.util.LogUtils;
-import com.orgzly.android.util.NoteContentParser;
+import com.orgzly.android.util.OrgFormatter;
 import com.orgzly.android.util.UserTimeFormatter;
 import com.orgzly.android.util.SpaceTokenizer;
 import com.orgzly.android.util.MiscUtils;
@@ -344,7 +344,7 @@ public class NoteFragment extends Fragment
                 } else {
                     bodyEdit.setVisibility(View.GONE);
 
-                    bodyView.setText(NoteContentParser.fromOrg(bodyEdit.getText().toString()));
+                    bodyView.setText(OrgFormatter.parse(bodyEdit.getText().toString()));
                     bodyView.setVisibility(View.VISIBLE);
 
                     ActivityUtils.closeSoftKeyboard(getActivity());
@@ -441,19 +441,19 @@ public class NoteFragment extends Fragment
         if (TextUtils.isEmpty(savedInstanceState.getString(ARG_CURRENT_SCHEDULED))) {
             head.setScheduled(null);
         } else {
-            head.setScheduled(OrgRange.getInstance(savedInstanceState.getString(ARG_CURRENT_SCHEDULED)));
+            head.setScheduled(OrgRange.parse(savedInstanceState.getString(ARG_CURRENT_SCHEDULED)));
         }
 
         if (TextUtils.isEmpty(savedInstanceState.getString(ARG_CURRENT_DEADLINE))) {
             head.setDeadline(null);
         } else {
-            head.setDeadline(OrgRange.getInstance(savedInstanceState.getString(ARG_CURRENT_DEADLINE)));
+            head.setDeadline(OrgRange.parse(savedInstanceState.getString(ARG_CURRENT_DEADLINE)));
         }
 
         if (TextUtils.isEmpty(savedInstanceState.getString(ARG_CURRENT_CLOSED))) {
             head.setClosed(null);
         } else {
-            head.setClosed(OrgRange.getInstance(savedInstanceState.getString(ARG_CURRENT_CLOSED)));
+            head.setClosed(OrgRange.parse(savedInstanceState.getString(ARG_CURRENT_CLOSED)));
         }
 
         head.removeProperties();
@@ -504,7 +504,7 @@ public class NoteFragment extends Fragment
 
         /* Content. */
         bodyEdit.setText(head.getContent());
-        bodyView.setText(NoteContentParser.fromOrg(head.getContent()));
+        bodyView.setText(OrgFormatter.parse(head.getContent()));
     }
 
     private void addPropertyToList(OrgProperty property) {
@@ -838,7 +838,7 @@ public class NoteFragment extends Fragment
                     .setDay(cal.get(Calendar.DAY_OF_MONTH))
                     .build();
 
-            OrgRange time = OrgRange.getInstance(timestamp);
+            OrgRange time = new OrgRange(timestamp);
 
             head.setScheduled(time);
         }
@@ -863,7 +863,7 @@ public class NoteFragment extends Fragment
         /* Prepend content with created-at property. */
         if (AppPreferences.createdAt(getContext())) {
             String propertyName = AppPreferences.createdAtProperty(getContext());
-            String time = OrgDateTime.getInstance(false).toString(); /* Inactive time. */
+            String time = new OrgDateTime(false).toString(); /* Inactive time. */
 
             head.addProperty(new OrgProperty(propertyName, time));
         }
@@ -928,7 +928,7 @@ public class NoteFragment extends Fragment
 
     @Override /* TimestampDialog */
     public void onDateTimeSet(int id, TreeSet<Long> noteIds, OrgDateTime time) {
-        OrgRange range = OrgRange.getInstance(time);
+        OrgRange range = new OrgRange(time);
 
         switch (id) {
             case R.id.fragment_note_scheduled_button:
